@@ -1,0 +1,55 @@
+---
+title: "SCF Finances"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+#df <- haven::read_dta("p19i6.dta")
+df <- read_csv("SCFP2019.csv")
+```
+
+to make this useable I need to translate this SAS code into R
+https://www.federalreserve.gov/econres/files/bulletin.macro.txt
+
+there is a flow chart that gives variable names here
+https://www.federalreserve.gov/econres/files/Networth%20Flowchart.pdf
+
+there appears to be an online codebook for the final dataset that is extremely slow:
+https://sda.berkeley.edu/sdaweb/docs/scfcomb2019/DOC/hcbk.htm;jsessionid=40FDDFAC459F31A7672973E95905B08A
+
+```{r}
+#recoding some key variables
+df_glp <- df %>%
+  mutate(age = AGE,
+         kids = KIDS,
+         labor_forece = LF,
+         race = case_when(
+    RACE == 1 ~ "White",
+    RACE == 2 ~ "Black",
+    RACE == 3 ~ "Hispanic",
+    RACE == 5 ~ "Other",
+  ),
+  home_owner = case_when(
+    HOUSECL == 1 ~ 1,
+    HOUSECL == 2 ~ 0
+  ),
+  married = case_when(
+    MARRIED == 1 ~ 1,
+    MARRIED == 2 ~ 0
+  ),
+  educ = case_when(
+    
+  ))
+
+```
+
+
+```{r}
+
+```
+
+
