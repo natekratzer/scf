@@ -30,7 +30,9 @@ df_glp <- df %>%
          asssets = ASSET,
          fin_assets = FIN,
          nonfin_assets = NFIN,
-         vehicle = OWN
+         vehicle = OWN,
+         debt = DEBT,
+         monthly_rent = rent,
          race = case_when(
     RACE == 1 ~ "White",
     RACE == 2 ~ "Black",
