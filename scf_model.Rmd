@@ -27,6 +27,10 @@ df_glp <- df %>%
   mutate(age = AGE,
          kids = KIDS,
          labor_forece = LF,
+         asssets = ASSET,
+         fin_assets = FIN,
+         nonfin_assets = NFIN,
+         vehicle = OWN
          race = case_when(
     RACE == 1 ~ "White",
     RACE == 2 ~ "Black",
