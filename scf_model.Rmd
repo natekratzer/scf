@@ -35,7 +35,6 @@ df_glp <- df %>%
     kids = KIDS,
     labor_force = LF,
     net_worth = NETWORTH,
-    log_nw = log0(net_worth),
     vehicle = OWN,
     income = INCOME,
     log_inc = log0(income),
@@ -58,7 +57,7 @@ df_glp <- df %>%
       EDCL == 4 ~ "college degree"
     )
   ) %>%
-  select(log_nw, log_inc, income, age, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
+  select(log_inc, income, age, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
 
 ```
 
@@ -86,7 +85,7 @@ scf_test <- testing(scf_split)
 
 ```{r}
 simple_scf <- 
-  recipe(net_worth ~ log_inc + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race,
+  recipe(net_worth ~ income + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race,
          data = df_glp) %>%
   step_dummy(educ, race)
 
@@ -117,17 +116,15 @@ lm_fit <- fit(lm_wflow, scf_train)
 
 
 ```{r}
-scf_test_res <- predict(lm_fit, new_data = scf_test %>% select(-log_nw))
-scf_test_res <- bind_cols(scf_test_res, scf_test %>% select(log_nw))
+scf_test_res <- predict(lm_fit, new_data = scf_test %>% select(-net_worth))
+scf_test_res <- bind_cols(scf_test_res, scf_test %>% select(net_worth))
 head(scf_test_res)
 ```
 
 ```{r}
-ggplot(scf_test_res, aes(x = log_nw, y = .pred)) +
+ggplot(scf_test_res, aes(x = net_worth, y = .pred)) +
   geom_abline(lty = 2) +
   geom_point(alpha = 0.5) 
 ```
-```{r}
-df_filtered <- df_glp 
-```
+
 
