@@ -1,3 +1,6 @@
+# Large data file
+*.dta
+
 # History files
 .Rhistory
 .Rapp.history

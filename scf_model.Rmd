@@ -12,7 +12,7 @@ library(tidyverse)
 df <- read_csv("SCFP2019.csv")
 ```
 
-to make this useable I need to translate this SAS code into R
+to make this useable I need to translate parts of this SAS code into R
 https://www.federalreserve.gov/econres/files/bulletin.macro.txt
 
 there is a flow chart that gives variable names here
@@ -24,38 +24,45 @@ https://sda.berkeley.edu/sdaweb/docs/scfcomb2019/DOC/hcbk.htm;jsessionid=40FDDFA
 ```{r}
 #recoding some key variables
 df_glp <- df %>%
-  mutate(age = AGE,
-         kids = KIDS,
-         labor_forece = LF,
-         asssets = ASSET,
-         fin_assets = FIN,
-         nonfin_assets = NFIN,
-         vehicle = OWN,
-         debt = DEBT,
-         monthly_rent = rent,
-         race = case_when(
-    RACE == 1 ~ "White",
-    RACE == 2 ~ "Black",
-    RACE == 3 ~ "Hispanic",
-    RACE == 5 ~ "Other",
-  ),
-  home_owner = case_when(
-    HOUSECL == 1 ~ 1,
-    HOUSECL == 2 ~ 0
-  ),
-  married = case_when(
-    MARRIED == 1 ~ 1,
-    MARRIED == 2 ~ 0
-  ),
-  educ = case_when(
-    
-  ))
+  mutate(
+    age = AGE,
+    kids = KIDS,
+    labor_force = LF,
+    net_worth = NETWORTH,
+    assets = ASSET,
+    fin_assets = FIN,
+    nonfin_assets = NFIN,
+    vehicle = OWN,
+    debt = DEBT,
+    income = INCOME,
+    wage_inc = WAGEINC,
+    monthly_rent = RENT,
+    wgt = WGT,
+    race = case_when(
+      RACE == 1 ~ "White",
+      RACE == 2 ~ "Black",
+      RACE == 3 ~ "Hispanic",
+      RACE == 5 ~ "Other",
+    ),
+    home_owner = case_when(HOUSECL == 1 ~ 1,
+                           HOUSECL == 2 ~ 0),
+    married = case_when(MARRIED == 1 ~ 1,
+                        MARRIED == 2 ~ 0),
+    educ = case_when(
+      EDCL == 1 ~ "no hs degree",
+      EDCL == 2 ~ "hs degree",
+      EDCL == 3 ~ "some college",
+      EDCL == 4 ~ "college degree"
+    )
+  ) %>%
+  select(income, age, kids, labor_force, race, assets, vehicle, monthly_rent, home_owner, married, educ, wage_inc, net_worth, wgt)
 
 ```
 
 
 ```{r}
-
+lm1 <- lm(net_worth ~ income + wage_inc + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp, weights = wgt)
+summary(lm1)
 ```
 
 
