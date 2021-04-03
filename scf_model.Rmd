@@ -5,10 +5,10 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
+library(tidymodels)
 ```
 
 ```{r}
-#df <- haven::read_dta("p19i6.dta")
 df <- read_csv("SCFP2019.csv")
 ```
 
@@ -22,6 +22,12 @@ there appears to be an online codebook for the final dataset that is extremely s
 https://sda.berkeley.edu/sdaweb/docs/scfcomb2019/DOC/hcbk.htm;jsessionid=40FDDFAC459F31A7672973E95905B08A
 
 ```{r}
+# while it's not exactly right to set log(0) to be 0, in practice this doesn't impact results. And leaving it at -Inf is not an option
+log0 <- function(x) {
+  x <- log(x)
+  x <- replace(x, !is.finite(x), 0)
+}
+
 #recoding some key variables
 df_glp <- df %>%
   mutate(
@@ -29,13 +35,10 @@ df_glp <- df %>%
     kids = KIDS,
     labor_force = LF,
     net_worth = NETWORTH,
-    assets = ASSET,
-    fin_assets = FIN,
-    nonfin_assets = NFIN,
+    log_nw = log0(net_worth),
     vehicle = OWN,
-    debt = DEBT,
     income = INCOME,
-    wage_inc = WAGEINC,
+    log_inc = log0(income),
     monthly_rent = RENT,
     wgt = WGT,
     race = case_when(
@@ -55,14 +58,76 @@ df_glp <- df %>%
       EDCL == 4 ~ "college degree"
     )
   ) %>%
-  select(income, age, kids, labor_force, race, assets, vehicle, monthly_rent, home_owner, married, educ, wage_inc, net_worth, wgt)
+  select(log_nw, log_inc, income, age, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
 
 ```
 
 
 ```{r}
-lm1 <- lm(net_worth ~ income + wage_inc + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp, weights = wgt)
+lm1 <- lm(net_worth ~ income + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp)
 summary(lm1)
 ```
+Let's try log values for both net worth and income
+```{r}
+lm2 <- lm(net_worth ~ log_inc + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp)
+summary(lm2)
+```
+## Tidymodels time
 
+Testing and training sets
+```{r}
+set.seed(42)
+scf_split <- initial_split(df_glp, prop = 0.80)
+
+scf_train <- training(scf_split)
+scf_test <- testing(scf_split)
+```
+
+
+```{r}
+simple_scf <- 
+  recipe(net_worth ~ log_inc + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race,
+         data = df_glp) %>%
+  step_dummy(educ, race)
+
+prepped_scf <- prep(simple_scf, training = scf_train)
+
+baked_scf <- bake(prepped_scf, new_data = scf_train)
+```
+
+#recreate our initial model
+```{r}
+lm_fit <- lm(net_worth ~ ., data = baked_scf)
+summary(lm_fit)
+```
+```{r}
+lm_model <- linear_reg() %>%
+  set_engine("lm")
+```
+
+
+```{r}
+lm_wflow <-
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(simple_scf)
+
+lm_fit <- fit(lm_wflow, scf_train)
+```
+
+
+```{r}
+scf_test_res <- predict(lm_fit, new_data = scf_test %>% select(-log_nw))
+scf_test_res <- bind_cols(scf_test_res, scf_test %>% select(log_nw))
+head(scf_test_res)
+```
+
+```{r}
+ggplot(scf_test_res, aes(x = log_nw, y = .pred)) +
+  geom_abline(lty = 2) +
+  geom_point(alpha = 0.5) 
+```
+```{r}
+df_filtered <- df_glp 
+```
 
