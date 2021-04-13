@@ -32,6 +32,7 @@ log0 <- function(x) {
 df_glp <- df %>%
   mutate(
     age = AGE,
+    age_sq = age^2,
     kids = KIDS,
     labor_force = LF,
     net_worth = NETWORTH,
@@ -57,18 +58,18 @@ df_glp <- df %>%
       EDCL == 4 ~ "college degree"
     )
   ) %>%
-  select(log_inc, income, age, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
-
+  select(log_inc, income, age, age_sq, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
 ```
 
 
 ```{r}
-lm1 <- lm(net_worth ~ income + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp)
+lm1 <- lm(net_worth ~ income + age + age_sq + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp)
 summary(lm1)
 ```
-Let's try log values for both net worth and income
+Let's try log values for income
+This makes it much worse
 ```{r}
-lm2 <- lm(net_worth ~ log_inc + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp)
+lm2 <- lm(net_worth ~ log_inc + age + age_sq + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race, data = df_glp)
 summary(lm2)
 ```
 ## Tidymodels time
@@ -85,7 +86,7 @@ scf_test <- testing(scf_split)
 
 ```{r}
 simple_scf <- 
-  recipe(net_worth ~ income + age + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race,
+  recipe(net_worth ~ income + age + age_sq + kids + labor_force + vehicle + monthly_rent + home_owner + married + educ + race,
          data = df_glp) %>%
   step_dummy(educ, race)
 
@@ -123,8 +124,65 @@ head(scf_test_res)
 
 ```{r}
 ggplot(scf_test_res, aes(x = net_worth, y = .pred)) +
-  geom_abline(lty = 2) +
+  geom_abline(lty = 2) + #dashed line
   geom_point(alpha = 0.5) 
 ```
 
+
+```{r}
+rmse(scf_test_res, truth = net_worth, estimate = .pred)
+```
+
+Trying with xgboost
+
+```{r}
+xgb_spec <- boost_tree(
+  trees = 1000) %>%
+  set_engine("xgboost") %>% 
+  set_mode("regression")
+
+xgb_spec
+
+xgb_grid <- grid_latin_hypercube(
+  tree_depth(),
+  min_n(),
+  loss_reduction(),
+  sample_size = sample_prop(),
+  finalize(mtry(), scf_train),
+  learn_rate(),
+  size = 30
+)
+
+xgb_grid
+
+xgb_wf <- workflow() %>%
+  add_formula(net_worth ~ .) %>%
+  add_model(xgb_spec)
+
+xgb_wf
+```
+
+```{r}
+xgb_fit <- fit(xgb_wf, scf_train)
+```
+
+```{r}
+scf_test_res <- predict(xgb_fit, new_data = scf_test %>% select(-net_worth))
+scf_test_res <- bind_cols(scf_test_res, scf_test %>% select(net_worth))
+head(scf_test_res)
+```
+
+```{r}
+rmse(scf_test_res, truth = net_worth, estimate = .pred)
+```
+
+```{r}
+scf_test_plt <- scf_test_res %>%
+  mutate(nw_mil = net_worth/1000000,
+         pred_mil = .pred/1000000)
+
+ggplot(scf_test_plt, aes(x = nw_mil, y = pred_mil)) +
+  geom_abline(lty = 2) + #dashed line
+  geom_point(alpha = 0.5) 
+```
 
