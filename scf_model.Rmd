@@ -38,6 +38,8 @@ df_glp <- df %>%
     net_worth = NETWORTH,
     vehicle = OWN,
     income = INCOME,
+    inc_sq = income^2,
+    inc_cub = income^3,
     log_inc = log0(income),
     monthly_rent = RENT,
     wgt = WGT,
@@ -58,7 +60,19 @@ df_glp <- df %>%
       EDCL == 4 ~ "college degree"
     )
   ) %>%
-  select(log_inc, income, age, age_sq, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
+  select(log_inc, income, inc_sq, inc_cub, age, age_sq, kids, labor_force, race, vehicle, monthly_rent, home_owner, married, educ, net_worth, wgt)
+```
+
+
+```{r}
+ggplot(df_glp, aes(x = income, y = net_worth)) +
+  geom_point()
+```
+
+
+```{r}
+lm0 <- lm(net_worth ~ income, data = df_glp)
+summary(lm0)
 ```
 
 
